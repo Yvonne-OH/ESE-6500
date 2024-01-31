@@ -17,12 +17,12 @@ class HistogramFilter(object):
         #
 
         ### Your Algorithm goes Below.
-        cmap = np.rot90(cmap,-1)
-        belief = np.rot90(belief,-1)
+        cmap = cmap
+        belief = belief
         N_dimension = cmap.shape[0]
         M_dimension = cmap.shape[1]
-        sensor_ob_true,sensor_ob_false=0.9,0.1 # probabilities for sensor accuracy 
-        execute_move,execute_stay=0.9,0.1      # probabilities for movement execution
+        sensor_ob_true,sensor_ob_false= 0.9,0.1 # probabilities for sensor accuracy 
+        execute_move,execute_stay= 0.9,0.1      # probabilities for movement execution
         
         n_belief=np.zeros([N_dimension,M_dimension])
         sensor_prob = np.zeros([N_dimension,M_dimension])
@@ -30,36 +30,63 @@ class HistogramFilter(object):
         """
         action: -1 move backward; 0 stay; 1 move forward       
         """ 
+        print(belief.shape)
         # Update belief based on the action
         for step_x in range(N_dimension):
-            for step_y in range(M_dimension):
-                if  step_x+action[0]<N_dimension and step_x+action[0]>=0 and step_y+action[1]<M_dimension and step_y+action[1]>=0:
-                    #For robots not on the boundaries 
-                    n_belief[step_x+action[0]][step_y+action[1]] += belief[step_x][step_y]*execute_move
-                    n_belief[step_x][step_y] += belief[step_x][step_y]*execute_stay
-                else:
-                    #For robots on the boundaries, not move 
-                    n_belief[step_x][step_y] += belief[step_x][step_y]
-        
+            for step_y in range(M_dimension): 
+                if action[0] == 0 and action[1] == 1:  #moving up
+                    if step_x == 0:  # top
+                        n_belief[step_x][step_y] = belief[step_x][step_y] +  execute_move * belief[step_x + 1][step_y]
+                    elif step_x == N_dimension - 1:  # bottom
+                        n_belief[step_x][step_y] = execute_stay * belief[step_x][step_y]
+                    else:  # other
+                        n_belief[step_x][step_y] = execute_stay * belief[step_x][step_y] +  execute_move * belief[step_x + 1][step_y]
+                
+                if action[0] == 0 and action[1] == -1:  # down
+                    if step_x == N_dimension - 1:  # bottom
+                        n_belief[step_x][step_y] = belief[step_x][step_y] +  execute_move * belief[step_x - 1][step_y]
+                    elif step_x == 0:  # top
+                        n_belief[step_x][step_y] = execute_stay * belief[step_x][step_y]
+                    else:  # other
+                        n_belief[step_x][step_y] = execute_stay * belief[step_x][step_y] +  execute_move * belief[step_x - 1][step_y]
+            
+                if action[0] == 1 and action[1] == 0:  # right
+                    if step_y == M_dimension - 1:  # right edge
+                        n_belief[step_x][step_y] = belief[step_x][step_y] +  execute_move * belief[step_x][step_y - 1]
+                    elif step_y == 0:  # left edge
+                        n_belief[step_x][step_y] = execute_stay * belief[step_x][step_y]
+                    else:  # other
+                        n_belief[step_x][step_y] = execute_stay * belief[step_x][step_y] +  execute_move * belief[step_x][step_y - 1]
+            
+                if action[0] == -1 and action[1] == 0:  # left
+                    if step_y == 0:  # left edge
+                        n_belief[step_x][step_y] = belief[step_x][step_y] +  execute_move * belief[step_x][step_y + 1]
+                    elif step_y == M_dimension - 1:  # right edge
+                        n_belief[step_x][step_y] = execute_stay * belief[step_x][step_y]
+                    else:  # other
+                        n_belief[step_x][step_y] = execute_stay * belief[step_x][step_y] +  execute_move * belief[step_x][step_y + 1]
+                    
+
         # Update belief based on the sensor observation
+        
         for step_x in range(N_dimension):
             for step_y in range(M_dimension):
                 bool_ = int(cmap[step_x][step_y] == observation)
                 sensor_prob[step_x][step_y] = bool_ * sensor_ob_true + (1 - bool_) * sensor_ob_false
         
         n_belief = np.multiply(sensor_prob, n_belief)
-        n_belief /= sensor_prob.sum()                  # Normalize the distribution
+        n_belief /= n_belief.sum()                  # Normalize the distribution
         
         
         # Find the position with the highest belief for test
         tmp = 0
         for i in range(N_dimension):
             for j in range(M_dimension):
-                if n_belief[i][j] > tmp:
-                    tmp = n_belief[i][j]
+                if n_belief[step_x][step_y] > tmp:
+                    tmp = n_belief[step_x][step_y]
                     state = [i,j]
         
-        return np.rot90(n_belief,k=1)
+        return n_belief
     
 
 

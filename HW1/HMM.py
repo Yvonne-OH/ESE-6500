@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Jan 29 14:38:39 2024
+
+@author: 39829
+"""
 
 import numpy as np
 
@@ -52,7 +58,6 @@ class HMM():
 
         return xi
 
-
     def update(self, gamma, xi):
         # Update initial state distribution
         new_init_state = gamma[0, :]
@@ -66,7 +71,7 @@ class HMM():
             for o in range(self.Emission.shape[1]):
                 mask = (self.Observations == o)
                 M_prime[s, o] = np.sum(gamma[mask, s]) / np.sum(gamma[:, s])
-    
+
         return T_prime, M_prime, new_init_state
 
     def trajectory_probability(self, alpha, new_init_state, T_prime, M_prime):
@@ -75,22 +80,19 @@ class HMM():
         self.Transition = T_prime
         self.Emission = M_prime
         new_alpha = self.forward()
-    
+
         # Original trajectory probability
         P_original = np.sum(alpha[-1, :])
         # Updated trajectory probability
         P_prime = np.sum(new_alpha[-1, :])
-    
+
         return P_original, P_prime
     
+"""   
     def infer_missing_observations(self):
-        """
-        This function uses the gamma values to infer missing observations.
-        For simplicity, it assumes missing observations are represented by a 
-        specific symbol (e.g., -1) in the Observations array.
-        """
+
         inferred_observations = self.Observations.copy()
-        missing_indices = np.where(self.Observations == -1)[0]
+        missing_indices = np.where(self.Observations == 2)[0]
         
         # Compute gamma using forward and backward algorithms
         alpha = self.forward()
@@ -103,23 +105,72 @@ class HMM():
             inferred_observations[idx] = most_probable_state
         
         return inferred_observations
-    
 
 # Example usage
 # Define your transition matrix, emission matrix, initial distribution, and observations.
 # Replace these with your actual matrices and observation sequence.
 Transition = np.array([[0.5, 0.5], [0.5, 0.5]])
 Emission = np.array([[0.4, 0.1, 0.5], [0.1, 0.5, 0.4]])
-Initial_distribution = np.array([0.6, 0.4])
-Observations = np.array([0, 1, 2, 0, 1])  # Placeholder for actual observations
+Initial_distribution = np.array([0.5, 0.5])
+Observations = np.array([2,0,0,2,1,2,1,1,1,2,1,1,1,1,1,2,2,0,0,1])   # Placeholder for actual observations
 
-
-Observations = np.array([0, 1, -1, 0, 1])  # Assuming -1 indicates a missing observation
-
-# Create an instance of the HMM with the modified Observations
+# Create an instance of the HMM
 hmm = HMM(Observations, Transition, Emission, Initial_distribution)
 
-# Infer the missing observations
+# Run the forward and backward algorithms
+alpha = hmm.forward()
+beta = hmm.backward()
+
+# Compute gamma and xi
+gamma = hmm.gamma_comp(alpha, beta)
+xi = hmm.xi_comp(alpha, beta, gamma)
+
+# Update the HMM parameters
+T_prime, M_prime, new_init_state = hmm.update(gamma, xi)
+
+# Compute trajectory probabilities
+P_original, P_prime = hmm.trajectory_probability(alpha, new_init_state, T_prime, M_prime)
+
 inferred_observations = hmm.infer_missing_observations()
+# Mapping from numbers to strings
+location_mapping = {0: 'LA', 1: 'NY'}
+
+# Convert the array of 0s and 1s to an array of strings
+inferred_observations = [location_mapping[location] for location in inferred_observations]
 print("Inferred observations:", inferred_observations)
 
+#%%
+
+
+# Create an instance of the HMM with the initial parameters
+hmm = HMM(Observations, Transition, Emission, Initial_distribution)
+
+# Run the forward algorithm with the initial parameters
+alpha = hmm.forward()
+
+# Compute the initial trajectory probability
+P_lambda = np.sum(alpha[-1, :])
+
+# Update the HMM parameters using Baum-Welch (gamma and xi have already been calculated)
+T_prime, M_prime, new_init_state = hmm.update(gamma, xi)
+
+# Set the updated parameters in the HMM
+hmm.Transition = T_prime
+hmm.Emission = M_prime
+hmm.Initial_distribution = new_init_state
+
+# Run the forward algorithm with the updated parameters
+new_alpha = hmm.forward()
+
+# Compute the updated trajectory probability
+P_lambda_prime = np.sum(new_alpha[-1, :])
+
+# Print the two probabilities to compare
+print("P(Y | λ):", P_lambda)
+print("P(Y | λ'):", P_lambda_prime)
+
+# Check if the updated probability is greater than the initial
+if P_lambda_prime > P_lambda:
+    print("The updated model better fits the observation sequence.")
+else:
+    print("The updated model does not fit the observation sequence better.")"""

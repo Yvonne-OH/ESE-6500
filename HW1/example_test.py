@@ -20,12 +20,12 @@ if __name__ == "__main__":
 
     #### Test your code here
         
-    belief = [[1/400 for i in range(20)] for j in range(20)]
+    belief  = np.ones((20,20))/400
     
     H_filter = HistogramFilter()
     
     for i in range(len(belief_states)):
     
         p = H_filter.histogram_filter(cmap, belief, actions[i], observations[i])
-        belief = p[0]
-        print (p[1])
+        #belief = p[0]
+        #print (p[1])
