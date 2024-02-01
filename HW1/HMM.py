@@ -25,7 +25,7 @@ class HMM():
         for t in range(1, len(self.Observations)):
             for j in range(len(self.Transition)):
                 alpha[t, j] = self.Emission[j, self.Observations[t]] * np.sum(alpha[t-1, :] * self.Transition[:, j])
-
+        
         return alpha
 
     def backward(self):
@@ -38,31 +38,45 @@ class HMM():
         for t in range(len(self.Observations) - 2, -1, -1):
             for i in range(len(self.Transition)):
                 beta[t, i] = np.sum(beta[t+1, :] * self.Transition[i, :] * self.Emission[:, self.Observations[t+1]])
-
+        
         return beta
 
     def gamma_comp(self, alpha, beta):
         gamma = np.multiply(alpha, beta)
         gamma /= np.sum(gamma, axis=1, keepdims=True)
-
+        
         return gamma
 
     def xi_comp(self, alpha, beta, gamma):
         xi = np.zeros((len(self.Observations) - 1, len(self.Transition), len(self.Transition)))
-
-        for t in range(len(self.Observations) - 1):
-            denominator = np.dot(alpha[t, :].T, beta[t + 1, :] * self.Emission[:, self.Observations[t + 1]].T)
+        
+        for t in range(len(self.Observations)-1):
+            denom = 0.0
             for i in range(len(self.Transition)):
-                numerator = alpha[t, i] * self.Transition[i, :] * self.Emission[:, self.Observations[t + 1]] * beta[t + 1, :]
-                xi[t, i, :] = numerator / denominator
-
+                for j in range(len(self.Transition)):
+                    temp = alpha[t][i]*self.Transition[i][j]*self.Emission[j, self.Observations[t + 1]]*beta[t+1][j]
+                    denom += temp
+            for i in range(len(self.Transition)):
+                for j in range(len(self.Transition)):
+                    numer = alpha[t][i]*self.Transition[i][j]*self.Emission[j, self.Observations[t + 1]]*beta[t+1][j]
+                    xi[t][i][j] = numer/denom
+                
         return xi
+
 
     def update(self, gamma, xi):
         # Update initial state distribution
         new_init_state = gamma[0, :]
         # Update transition matrix
         T_prime = np.sum(xi, axis=0) / np.sum(gamma[:-1, :], axis=0, keepdims=True)
+        for i in range(len(self.Transition)):
+            for j in range(len(self.Transition)):
+                numer = 0.0
+                denom = 0.0
+                for t in range(len(self.Observations)-1):
+                    numer += (xi[t][i][j])
+                    denom += (gamma[t][i])
+                T_prime[i][j] = numer/denom
 
         # Assume the emission matrix M is of shape (N_states, N_observations)
         # Update emission probabilities (M_prime) if necessary
@@ -71,6 +85,8 @@ class HMM():
             for o in range(self.Emission.shape[1]):
                 mask = (self.Observations == o)
                 M_prime[s, o] = np.sum(gamma[mask, s]) / np.sum(gamma[:, s])
+        
+        
 
         return T_prime, M_prime, new_init_state
 
@@ -85,10 +101,12 @@ class HMM():
         P_original = np.sum(alpha[-1, :])
         # Updated trajectory probability
         P_prime = np.sum(new_alpha[-1, :])
+        
+        print(type(P_original))
 
         return P_original, P_prime
     
-"""   
+ 
     def infer_missing_observations(self):
 
         inferred_observations = self.Observations.copy()
@@ -173,4 +191,4 @@ print("P(Y | λ'):", P_lambda_prime)
 if P_lambda_prime > P_lambda:
     print("The updated model better fits the observation sequence.")
 else:
-    print("The updated model does not fit the observation sequence better.")"""
+    print("The updated model does not fit the observation sequence better.")
