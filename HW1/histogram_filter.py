@@ -30,38 +30,32 @@ class HistogramFilter(object):
         """
         action: -1 move backward; 0 stay; 1 move forward       
         """ 
-        print(belief.shape)
+        
         # Update belief based on the action
+
+        
         for step_x in range(N_dimension):
             for step_y in range(M_dimension): 
                 if action[0] == 0 and action[1] == 1:  #moving up
-                    if step_x == 0:  # top
-                        n_belief[step_x][step_y] = belief[step_x][step_y] +  execute_move * belief[step_x + 1][step_y]
-                    elif step_x == N_dimension - 1:  # bottom
+                    if step_x == N_dimension - 1:  # bottom
                         n_belief[step_x][step_y] = execute_stay * belief[step_x][step_y]
                     else:  # other
                         n_belief[step_x][step_y] = execute_stay * belief[step_x][step_y] +  execute_move * belief[step_x + 1][step_y]
                 
                 if action[0] == 0 and action[1] == -1:  # down
-                    if step_x == N_dimension - 1:  # bottom
-                        n_belief[step_x][step_y] = belief[step_x][step_y] +  execute_move * belief[step_x - 1][step_y]
-                    elif step_x == 0:  # top
+                    if step_x == 0:  # top
                         n_belief[step_x][step_y] = execute_stay * belief[step_x][step_y]
                     else:  # other
                         n_belief[step_x][step_y] = execute_stay * belief[step_x][step_y] +  execute_move * belief[step_x - 1][step_y]
             
                 if action[0] == 1 and action[1] == 0:  # right
-                    if step_y == M_dimension - 1:  # right edge
-                        n_belief[step_x][step_y] = belief[step_x][step_y] +  execute_move * belief[step_x][step_y - 1]
-                    elif step_y == 0:  # left edge
+                    if step_y == 0:  # left edge
                         n_belief[step_x][step_y] = execute_stay * belief[step_x][step_y]
                     else:  # other
                         n_belief[step_x][step_y] = execute_stay * belief[step_x][step_y] +  execute_move * belief[step_x][step_y - 1]
             
                 if action[0] == -1 and action[1] == 0:  # left
-                    if step_y == 0:  # left edge
-                        n_belief[step_x][step_y] = belief[step_x][step_y] +  execute_move * belief[step_x][step_y + 1]
-                    elif step_y == M_dimension - 1:  # right edge
+                    if step_y == M_dimension - 1:  # right edge
                         n_belief[step_x][step_y] = execute_stay * belief[step_x][step_y]
                     else:  # other
                         n_belief[step_x][step_y] = execute_stay * belief[step_x][step_y] +  execute_move * belief[step_x][step_y + 1]
@@ -76,7 +70,6 @@ class HistogramFilter(object):
         
         n_belief = np.multiply(sensor_prob, n_belief)
         n_belief /= n_belief.sum()                  # Normalize the distribution
-        
         
         # Find the position with the highest belief for test
         tmp = 0
