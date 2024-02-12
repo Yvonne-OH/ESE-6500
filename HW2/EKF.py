@@ -11,7 +11,7 @@ nu_var = 1/2
 num_observations = 100
 
 # Initialization
-#np.random.seed(12)
+np.random.seed(12)
 x0 = np.random.normal(1, np.sqrt(2))
 x = np.zeros(num_observations)
 y = np.zeros(num_observations)
@@ -99,7 +99,7 @@ time_k = np.arange(num_observations)
 plt.figure(figsize=(10, 6))
 plt.plot(time_k, x_series, label='True value of a', color='r')
 plt.plot(time_k, x_estimates, label='Estimated value of a', color='b')
-#plt.fill_between(time_k, np.array(x_estimates) - np.array(x_uncertainties), np.array(x_estimates) + np.array(x_uncertainties), color='b', alpha=0.2, label='Confidence interval (±σ)')
+plt.fill_between(time_k, np.array(x_estimates) - np.array(x_uncertainties), np.array(x_estimates) + np.array(x_uncertainties), color='b', alpha=0.2, label='Confidence interval (±σ)')
 plt.xlabel('Time step (k)')
 plt.ylabel('Value')
 plt.title('True and Estimated Values of a Over Time')
