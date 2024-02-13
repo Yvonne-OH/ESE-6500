@@ -28,6 +28,7 @@ def estimate_rot(data_num=1):
     #return roll,pitch,yaw
 
 data_num=1
+
 imu = io.loadmat('imu/imuRaw'+str(data_num)+'.mat')
 vicon = io.loadmat('vicon/viconRot'+str(data_num)+'.mat')
 accel = imu['vals'][0:3,:]
@@ -35,15 +36,16 @@ gyro = imu['vals'][3:6,:]
 T = np.shape(imu['ts'])[1]
 dt = imu['ts']
 
-acc_sensitivity = 330.0
+acc_sensitivity = 33.6
 V_ref=3300
+g=9.81
 
 acc_x = np.array(accel[0])
 acc_y = np.array(accel[1])
 acc_z = np.array(accel[2])
 acc = np.array([acc_x, acc_y, acc_z]).T
 
-acc_scale_factor = V_ref/(1023.0*acc_sensitivity)
+acc_scale_factor = V_ref/(1023.0*acc_sensitivity)/g
 acc_bias = np.mean(acc[:10], axis=0) - np.array([0,0,1])/acc_scale_factor
 acc = (acc-acc_bias)*acc_scale_factor
 
@@ -106,7 +108,7 @@ orientation[0,:] = [Pitch[0], Roll[0], 0]  # 偏航角初始值假设为0
 
 # 通过陀螺仪数据积分更新方向
 for i in range(1, len(gyro)-1):
-    print(dt[0, i]-dt[0, i-1])
+   
     dp = gyro[i-1,0] * (dt[0, i]-dt[0, i-1])
     dr = gyro[i-1,1] * (dt[0, i]-dt[0, i-1])
     dy = gyro[i-1,2] * (dt[0, i]-dt[0, i-1])
