@@ -63,7 +63,7 @@ def ekf_update_fixed(x_est, P, y, Q, R):
 y_series = y # Given a series of observation values y
 x_series = x
 
-x_est = np.array([x0, -10])              # Initial state estimate [x_0, a]
+x_est = np.array([x0, -5])              # Initial state estimate [x_0, a]
 P = np.eye(2)                           # Initial state covariance
 Q = np.array([[1,0],[0,0.5]])             # Process noise covariance 
 R = np.array([np.sqrt(0.5)])            # Observation noise covariance
@@ -103,7 +103,7 @@ plt.plot(time_k, x_series,'k--',label='x ground truth')
 plt.fill_between(time_k, np.array(x_estimates) - np.array(x_uncertainties), np.array(x_estimates) + np.array(x_uncertainties), color='b', alpha=0.2, label='Confidence interval (±σ)')
 plt.xlabel('Time step (k)')
 plt.ylabel('Value')
-plt.title('True and Estimated Values of a Over Time')
+plt.title('True and Estimated Values of x and y Over Time')
 plt.legend()
 plt.grid(True)
 plt.show()
