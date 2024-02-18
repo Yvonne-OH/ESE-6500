@@ -76,7 +76,7 @@ def estimate_rot(data_num=1):
     imu_ts = np.array(imu['ts']).T  # (5000,1)
 
     Vref = 3300
-    acc_sensitivity = 330.0
+    acc_sensitivity = 275.0
 
 
 
@@ -87,26 +87,26 @@ def estimate_rot(data_num=1):
 
     
     acc_scale_factor = Vref/1023.0/acc_sensitivity
-    acc_bias = np.mean(acc[:10], axis=0) - np.array([0,0,1])/acc_scale_factor
+    acc_bias = np.mean(discard_outliers(acc[20:30], deviations = 3), axis=0) - np.array([0,0,1.012])/acc_scale_factor
     acc = (acc-acc_bias)*acc_scale_factor
 
 
-    gyro_x = np.array(imu_vals[4]) # angular rates are out of order !
+    gyro_x = np.array(imu_vals[4])      # angular rates are out of order !
     gyro_y = np.array(imu_vals[5])
     gyro_z = np.array(imu_vals[3])
     gyro = np.array([gyro_x, gyro_y, gyro_z]).T
-    gyro_sensitivity = 3.33
-    gyro_bias = np.mean(gyro[:10], axis=0)
+    gyro_sensitivity = 3.58
+    gyro_bias = np.mean(discard_outliers(gyro[20:30], deviations = 3), axis=0)-np.array([0,0,0])
     gyro_scale_factor = Vref/1023/gyro_sensitivity
     gyro = (gyro-gyro_bias)*gyro_scale_factor*(np.pi/180)
 
-    imu_vals = np.hstack((acc,gyro)) # updated imu_vals  (5000,6)
+    imu_vals = np.hstack((acc,gyro))    # updated imu_vals  (5000,6)
 
-    P = np.eye(3, 3) * 0.1      # init covariance matrix
-    Q = np.eye(3, 3) * 2.0      # init Process Noise Covariance Matrix
-    R = np.eye(3, 3) * 2.0      # init Measurement Noise Covariance Matrix
-    qt = np.array([1, 0, 0, 0]) # init initial quaternion 
-    predicted_q = qt            # init predicted quaternion
+    P = np.eye(3, 3) * 0.1              # init covariance matrix
+    Q = np.eye(3, 3) * 1.45             # init Process Noise Covariance Matrix
+    R = np.eye(3, 3) * 2.0              # init Measurement Noise Covariance Matrix
+    qt = np.array([1, 0, 0, 0])         # init initial quaternion 
+    predicted_q = qt                    # init predicted quaternion
 
     for i in range(T):
 
@@ -192,10 +192,10 @@ def quat_average(q, q0): # checked # q:(7,4) q0:(4,)
     """
     qt = q0
     r, c = q.shape #r=7,
-    epsilon = 0.0001
+    epsilon = 0.0002
     error = np.zeros((r,3)) #(7,3)
     
-    for _ in range(1000):
+    for _ in range(1200):
         for i in range(r):
             qt_Q=Quaternion(qt[0],-qt[1:])
             qt_Q.inv
@@ -280,7 +280,11 @@ def __mul__(a, b):
 def normalize_quaternion(q): 
     return q/np.sqrt(np.sum(np.power(q, 2)))
 
-
+def discard_outliers(array, deviations = 3):
+    mean = np.mean(array, axis=1).reshape(array.shape[0],1)
+    std = np.std(array, axis=1).reshape(array.shape[0],1)
+    no_outliers = np.any(abs(array - mean) < deviations*std, axis=0)
+    return array[:, no_outliers]
 
 if __name__ == '__main__':
      # _ = estimate_rot(1)
