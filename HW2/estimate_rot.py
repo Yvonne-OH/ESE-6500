@@ -6,6 +6,8 @@ import math
 
 import matplotlib.pyplot as plt
 
+from scipy.stats import zscore
+
 
 
 def gaussian_update(q, P, Q):  # checked
@@ -286,7 +288,143 @@ def discard_outliers(array, deviations = 3):
     no_outliers = np.any(abs(array - mean) < deviations*std, axis=0)
     return array[:, no_outliers]
 
+
+
+def filter_and_fill_outliers(angle_array, z_score_threshold=2.5, window_size=5):
+    """
+    Filters and fills outliers in a given angle array using the mean of surrounding values within a specified window size.
+    
+    Parameters:
+    - angle_array: A one-dimensional numpy array of shape (n,) containing angle values.
+    - z_score_threshold: The Z-score threshold used to identify outliers.
+    - window_size: The size of the window used to calculate the mean for filling outliers.
+    
+    Returns:
+    - The angle array with outliers filled using the mean of surrounding values.
+    """
+    
+    # Calculate Z-scores
+    z_scores = zscore(angle_array)
+    
+    # Identify outliers
+    outliers = np.abs(z_scores) > z_score_threshold
+    
+    # Fill outliers by mean of values within the window size
+    for i in np.where(outliers)[0]:
+        # Define the window boundaries
+        start = max(i - window_size // 2, 0)
+        end = min(i + window_size // 2, len(angle_array))
+        
+        # Calculate the mean of the window, excluding the outlier itself
+        window_values = angle_array[start:end]
+        window_outliers = outliers[start:end]
+        mean_value = np.mean(window_values[~window_outliers])
+        
+        # Fill the outlier with the calculated mean value
+        angle_array[i] = mean_value
+    
+    return angle_array
+
+
+"""
 if __name__ == '__main__':
      # _ = estimate_rot(1)
-     roll, pitch, yaw = estimate_rot(3)
-     print(f'DONE')
+     #roll, pitch, yaw = estimate_rot(3)
+     
+    data_num=1
+
+    imu = io.loadmat('imu/imuRaw'+str(data_num)+'.mat')
+    vicon = io.loadmat('vicon/viconRot'+str(data_num)+'.mat')
+    accel = imu['vals'][0:3,:]
+    gyro = imu['vals'][3:6,:]
+    T = np.shape(imu['ts'])[1]
+    dt = imu['ts']
+    
+
+    
+    # Sensor sensitivity and reference voltage
+    acc_sensitivity = 33.6
+    V_ref = 3300
+    g = 9.81
+    
+    # Convert raw accelerometer readings to numpy arrays
+    acc_x = np.array(accel[0])
+    acc_y = np.array(accel[1])
+    acc_z = np.array(accel[2])
+    acc = np.array([acc_x, acc_y, acc_z]).T
+    
+    # Calculate accelerometer scale factor and bias
+    acc_scale_factor = V_ref / (1023.0 * acc_sensitivity) / g
+    acc_bias = np.mean(acc[:10], axis=0) - np.array([0, 0, 1]) / acc_scale_factor
+    acc = (acc - acc_bias) * acc_scale_factor
+    
+    # Correct the orientation of accelerometer readings
+    acc_x = np.array(acc[:,0])  # ax and ay are flipped
+    acc_y = -np.array(acc[:,1])
+    acc_z = np.array(acc[:,2])
+    
+    # Calculate Pitch and Roll angles from accelerometer data, filtering outliers for Pitch
+    Pitch = np.arctan(acc_x / np.sqrt(acc_y**2 + acc_z**2))[np.abs(zscore(np.arctan(acc_x / np.sqrt(acc_y**2 + acc_z**2)))) <= 3]
+    Roll = np.arctan(acc_y / np.sqrt(acc_x**2 + acc_z**2))
+    Yaw = np.arctan2(acc_y, acc_x)
+    
+    # Reference orientation data from Vicon system
+    rots_vicon = vicon['rots']
+    T_vicon = vicon['ts']
+    
+    # Calculate and filter Vicon Roll, compute Pitch and Yaw from Vicon data
+    Roll_vicon = filter_and_fill_outliers(np.arctan2(rots_vicon[2, 1, :], rots_vicon[2, 2, :]))
+    Pitch_vicon = np.arcsin(-rots_vicon[2, 0, :])
+    Yaw_vicon = np.arctan2(rots_vicon[1, 0, :], rots_vicon[0, 0, :])
+    
+    # Plot Pitch and Roll angles from accelerometer and Vicon for comparison
+    plt.plot(Pitch, '.', label='Pitch')
+    plt.plot(Pitch_vicon, '.', label='Pitch Vicon')
+    plt.plot(Roll, label='Roll')
+    plt.plot(Roll_vicon, label='Roll Vicon')
+    plt.legend()
+    plt.title("Accelerometer Calibration")
+    plt.xlabel("time step/ step")
+    plt.ylabel("Radian")
+    plt.grid(True)
+    plt.show()
+    
+    # Convert raw gyroscope readings to numpy arrays
+    gyro_x = np.array(gyro[0])  # Angular rates are out of order
+    gyro_y = np.array(gyro[1])
+    gyro_z = np.array(gyro[2])
+    gyro = np.array([gyro_x, gyro_y, gyro_z]).T
+    
+    # Calculate gyroscope sensitivity, bias, and scale factor
+    gyro_sensitivity = 3.33
+    gyro_bias = np.mean(gyro[:20], axis=0)
+    gyro_scale_factor = V_ref / 1023 / gyro_sensitivity
+    gyro = (gyro - gyro_bias) * gyro_scale_factor * (np.pi / 180)
+    
+    # Initialize orientation array and set initial Pitch and Roll from accelerometer data
+    orientation = np.zeros((gyro.shape[0], 3))  # [pitch, roll, yaw]
+    orientation[0, :] = [Pitch[0], Roll[0], 0]  # Assume initial Yaw as 0
+    
+    # Update orientation using gyroscope data integration
+    for i in range(1, len(gyro) - 1):
+        dp = gyro[i - 1, 0] * (dt[0, i] - dt[0, i - 1])
+        dr = gyro[i - 1, 1] * (dt[0, i] - dt[0, i - 1])
+        dy = gyro[i - 1, 2] * (dt[0, i] - dt[0, i - 1])
+        
+        orientation[i, 0] = orientation[i - 1, 0] + dp
+        orientation[i, 1] = orientation[i - 1, 1] + dr
+        orientation[i, 2] = orientation[i - 1, 2] + dy
+    
+    # Plot updated Roll and Pitch from gyroscope, and compare with Vicon data
+    plt.plot(orientation[:, 1], ".", label='Roll')
+    plt.plot(orientation[:, 2], ".", label='Pitch')
+    plt.plot(Pitch_vicon, label='Pitch Vicon')
+    plt.plot(Roll_vicon, label='Roll Vicon')
+    plt.legend()
+    plt.title("Gyro Calibration")
+    plt.xlabel("time step/ step")
+    plt.ylabel("Radian")
+    plt.grid()
+    plt.show()
+
+    print(f'DONE')"""
