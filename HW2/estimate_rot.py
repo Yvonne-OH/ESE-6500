@@ -109,6 +109,11 @@ def estimate_rot(data_num=1):
     R = np.eye(3, 3) * 2.0              # init Measurement Noise Covariance Matrix
     qt = np.array([1, 0, 0, 0])         # init initial quaternion 
     predicted_q = qt                    # init predicted quaternion
+    
+    P_matrices = []
+    P_matrices.append(P)
+    Y_matrices = []
+
 
     for i in range(T):
 
@@ -126,6 +131,8 @@ def estimate_rot(data_num=1):
         X = gaussian_update(qt, P, Q)  # (7,4)=(q,w)
         # Process model
         Y = sigma_update(X, gyro, dt) #(7,4)
+        
+        Y_matrices.append(Y)
         
         # compute mean
         x_k_bar, error = quat_average(Y, qt) # 38,39 # (4,)  error:(7,3)
@@ -169,6 +176,55 @@ def estimate_rot(data_num=1):
         qt,P = kalman_update(P_k_bar, K, vk, x_k_bar, Pvv)
         # predict
         predicted_q = np.vstack((predicted_q, qt))
+        P_matrices.append(P)
+    
+    
+
+    #Plot the quaternion
+    std_devs = np.sqrt(np.array([np.diag(P_matrices[i]) for i in range(len(P_matrices))])/52.7)
+    
+    plt.figure(figsize=(12, 8))
+    quaternion_components = ['w', 'i', 'j', 'k']
+    for i in range(predicted_q.shape[1]):
+        plt.plot(predicted_q[:, i], label=f'Quaternion {quaternion_components[i]}')
+
+        plt.fill_between(range(len(P_matrices)), 
+                         predicted_q[:, i] - std_devs[:, i % 3],  
+                         predicted_q[:, i] + std_devs[:, i % 3], 
+                         alpha=0.2)
+    
+    plt.title("Quaternion Components with Uncertainty")
+    plt.xlabel("Time step")
+    plt.ylabel("Value")
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+    
+    
+    plt.figure(figsize=(12, 8))
+    quaternion_components = ['w', 'i', 'j', 'k']
+    for i in range(3):
+        plt.plot(predicted_q[:, i], label=f'Quaternion {quaternion_components[i]}')
+
+        plt.fill_between(range(len(P_matrices)), 
+                         predicted_q[:, i] - std_devs[:, i % 3],  
+                         predicted_q[:, i] + std_devs[:, i % 3], 
+                         alpha=0.2)
+    
+    plt.title("Quaternion Components with Uncertainty")
+    plt.xlabel("Time step")
+    plt.ylabel("Value")
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+    
+    plt.plot(predicted_q[:,0:4])
+    plt.title("Vicon quaternion Components")
+    plt.legend(["w",'i','j','k'])
+    plt.grid()
+    plt.show()
+
+    
 
     return quat_to_euler_angles(predicted_q)
 
@@ -326,10 +382,8 @@ def filter_and_fill_outliers(angle_array, z_score_threshold=2.5, window_size=5):
     return angle_array
 
 
-"""
+
 if __name__ == '__main__':
-     # _ = estimate_rot(1)
-     #roll, pitch, yaw = estimate_rot(3)
      
     data_num=1
 
@@ -401,6 +455,26 @@ if __name__ == '__main__':
     gyro_scale_factor = V_ref / 1023 / gyro_sensitivity
     gyro = (gyro - gyro_bias) * gyro_scale_factor * (np.pi / 180)
     
+    plt.figure(figsize=(12, 8))
+
+    a_c = ['x', 'y', 'z']
+    gyro_error = np.std(gyro, axis=0)
+    plt.figure(figsize=(10, 6))
+    for i in range(3):
+        plt.plot(gyro[:, i], label=f'Angular velocity {a_c[i]}')
+        plt.fill_between(range(len(gyro)), 
+                         gyro[:, i] - gyro_error[i], 
+                         gyro[:, i] + gyro_error[i], 
+                         alpha=0.2)  
+    
+    plt.title("Angular Velocity with covariance")
+    plt.xlabel("Time step")
+    plt.ylabel("Angular Velocity (rad/s)")
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+        
+    
     # Initialize orientation array and set initial Pitch and Roll from accelerometer data
     orientation = np.zeros((gyro.shape[0], 3))  # [pitch, roll, yaw]
     orientation[0, :] = [Pitch[0], Roll[0], 0]  # Assume initial Yaw as 0
@@ -426,5 +500,8 @@ if __name__ == '__main__':
     plt.ylabel("Radian")
     plt.grid()
     plt.show()
+    
+    _ = estimate_rot(1)
+    roll, pitch, yaw = estimate_rot(3)
 
-    print(f'DONE')"""
+    print(f'DONE')
