@@ -235,7 +235,7 @@ def visualize(J_new, u, obstacles_list, goal_idx_list, iteration_number):
     
     fig.colorbar(im, ax=ax)
     plt.title(f"Actions taken at the {iteration_number} iteration(s)")
-    plt.show()
+    plt.show()26.6
 
 
 # Initial setup
@@ -258,9 +258,10 @@ u = np.ones((num_policy_iter+1, env_shape[0], env_shape[1]), dtype=int)
 # Iterate over policy evaluation and improvement
 for k in range(num_policy_iter):
     J_new = policy_evaluation(T, Q, J, u[k])
+    visualize(J_new, u[k+1],obstacles_list, goal_idx_list,k)
     J = J_new
     u[k+1] = policy_improvement(T, Q, J_new, gamma, env_shape)
-    visualize(J_new, u[k+1],obstacles_list, goal_idx_list,k)
+    
 
 
 

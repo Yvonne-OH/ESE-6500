@@ -280,7 +280,7 @@ def nerf_step_forward(height, width, focal_length, trans_matrix,
     ################### YOUR CODE START ###################
 
     # Step 1: Generate rays
-    # Assuming an implementation of `get_rays` function that returns ray origins and directions
+    # an implementation of `get_rays` function that returns ray origins and directions
     ray_origins, ray_directions = get_rays(height, width, focal_length, trans_matrix)
     # print("ray_origins",ray_origins.shape)
     # print("ray_directions",ray_directions.shape)
@@ -288,7 +288,7 @@ def nerf_step_forward(height, width, focal_length, trans_matrix,
     # print(f"ray_directions is stored on: {ray_directions.device}")
 
     # Step 2: Sample points along each ray
-    # Assuming an implementation of `sample_points_from_rays` that returns sampled points and depth values
+    # an implementation of `sample_points_from_rays` that returns sampled points and depth values
     sampled_points, depth_values = sample_points_from_rays(ray_origins, ray_directions, near_point, far_point, num_depth_samples_per_ray)
     # print("sampled_points",sampled_points.shape)
     # print("depth_values",depth_values.shape)
@@ -296,7 +296,7 @@ def nerf_step_forward(height, width, focal_length, trans_matrix,
     # print(f"depth_values is stored on: {depth_values.device}")
 
     # Step 3: Apply positional encoding
-    # Assuming `positional_encoding` expects a flattened list of points
+    # `positional_encoding` expects a flattened list of points
     flattened_sampled_points = sampled_points.reshape(-1, 3)  # Flattening sampled points for positional encoding
     positional_encoded_points = positional_encoding(flattened_sampled_points)  # Apply positional encoding
     # print("positional_encoded_points",positional_encoded_points.shape)
@@ -321,7 +321,7 @@ def nerf_step_forward(height, width, focal_length, trans_matrix,
     #print(f"radiance_field is stored on: {radiance_field.device}")
 
 
-    # Assuming an implementation of `volume_rendering` that takes the radiance field, ray origins, and depth values
+    # an implementation of `volume_rendering` that takes the radiance field, ray origins, and depth values
     rgb_predicted = volume_rendering(radiance_field, ray_origins, depth_values)
     #print("rgb_predicted",rgb_predicted.shape)
 
