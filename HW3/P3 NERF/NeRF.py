@@ -33,7 +33,7 @@ def load_colmap_data():
     
     json_path='transforms_colmap.json'
     image_dir='./data/data/images'
-    resize_dim=(200, 200)
+    resize_dim=(100, 100)
     
     # Load JSON file
     with open(json_path, 'r') as f:

@@ -1,4 +1,6 @@
 # Pratik Chaudhari (pratikac@seas.upenn.edu)
+import os
+os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 
 import click, tqdm, random
 import numpy as np
@@ -151,7 +153,7 @@ def run_slam(src_dir, log_dir, idx, split):
     for t in tqdm.tqdm(range(1, total_steps)):
         slam.dynamics_step(t)
         slam.observation_step(t)
-        particle_positions.append(slam.lidar[t]['xyth'])
+        particle_positions.append(slam.estimated_pose)
     
     # Convert list of particle positions to a numpy array
     particle_positions = np.array(particle_positions)
@@ -161,7 +163,7 @@ def run_slam(src_dir, log_dir, idx, split):
     occupied_x, occupied_y = np.where(slam.map.cells == 1)                    # Plot occupied cells
     ax.plot(occupied_x, occupied_y, 'sk', markersize=1, label='Occupied')     # Plot particles
     particle_x, particle_y = slam.map.grid_cell_from_xy(particle_positions[:, 0], particle_positions[:, 1])
-    #ax.plot(particle_x, particle_y, '.r', markersize=5, label='Particles')
+    ax.plot(particle_x, particle_y, '.r', markersize=5, label='Particles')
     ax.grid(True)  
     ax.legend()
     ax.set(xlim=(0, slam.map.szx), ylim=(0, slam.map.szy), title=f'Map {idx}')
@@ -200,13 +202,13 @@ def main(src_dir, log_dir, idx, split, mode):
         return p
 
 if __name__=='__main__':
-    # src_dir = './'
-    # log_dir = 'logs'
-    # idx = 3
-    # split = 'train'
+    src_dir = './'
+    log_dir = 'logs'
+    idx = 3
+    split = 'train'
     
-    # run_dynamics_step(src_dir, log_dir, idx, split)
-    # run_observation_step(src_dir, log_dir, idx, split)
-    # run_dynamics_step(src_dir, log_dir, idx, split)
-    # run_slam(src_dir, log_dir, idx, split)
+    run_dynamics_step(src_dir, log_dir, idx, split)
+    run_observation_step(src_dir, log_dir, idx, split)
+    run_dynamics_step(src_dir, log_dir, idx, split)
+    run_slam(src_dir, log_dir, idx, split)
     main()
