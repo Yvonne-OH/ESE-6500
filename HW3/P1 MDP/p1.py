@@ -82,16 +82,15 @@ def generate_state_map(env_shape):
     state_map[4:6, 7] = 1
 
     # Flip the map if needed to match the desired orientation
-    # state_map = np.flip(state_map, axis=1)
-    # state_map = np.flip(state_map)
+    state_map = np.flip(state_map, axis=1)
+    state_map = np.flip(state_map)
 
     # Mark specific points of interest
     state_map[8, 8] = 2  # Goal position
-    state_map[8, 1] = 3  # Initial position
-    state_map[3, 3] = 4  # Another point of interest
+    state_map[6, 3] = 3  # Initial position
+    state_map[8, 1] = 4  # Another point of interest
 
     return state_map
-
 
 def generate_Q_map(states, env_shape, reward):
     """
@@ -196,7 +195,8 @@ def policy_improvement(T, Q, J_new, gamma, env_shape):
     # Return the improved policy
     return u_k
 
-def visualize(J_new, u, obstacles_list, goal_idx_list, iteration_number):
+
+def visualize(J_new, u, obstacles_list, goal_idx_list, iteration_number, special_cell=(3, 3)):
     """
     Visualizes the policy and value function of a grid.
 
@@ -205,22 +205,31 @@ def visualize(J_new, u, obstacles_list, goal_idx_list, iteration_number):
         u (np.ndarray): The policy matrix, with actions for each cell.
         obstacles_list (list of tuples): Coordinates of obstacles in the grid.
         goal_idx_list (list of tuples): Coordinates of goal(s) in the grid.
+        iteration_number (int): Current iteration number.
+        special_cell (tuple): Coordinates of the special cell to be highlighted.
     """
-      
     # Set up the figure and axes for the visualization
     fig, ax = plt.subplots(figsize=(5, 5))
-    ax.set_xticks(np.arange(0.5, 10.5, 1))
-    ax.set_yticks(np.arange(0.5, 10.5, 1))
+    ax.set_xticks(np.arange(0.5, J_new.shape[1], 1))
+    ax.set_yticks(np.arange(0.5, J_new.shape[0], 1))
     
     # Use a heatmap to visualize the value function
     cmap = plt.get_cmap('bwr') 
-    im = plt.imshow(J_new, cmap=cmap)
-    plt.imshow(J_new, cmap=cmap)
+    im = ax.imshow(J_new, cmap=cmap)
+    
+    # Add text displaying the values of each cell with smaller font size and white color
+    for i in range(J_new.shape[0]):
+        for j in range(J_new.shape[1]):
+            if special_cell is not None and (i, j) == special_cell:
+                ax.add_patch(plt.Rectangle((j - 0.5, i - 0.5), 1, 1, fill=True, color='green', alpha=0.5))
+            ax.text(j, i, round(J_new[i, j], 2), ha='center', va='center', color='white', fontsize=8)
+    
+    ax.add_patch(plt.Rectangle((1 - 0.5, 8 - 0.5), 1, 1, fill=True, color='orange', alpha=0.5))
     plt.grid(color='gray', linestyle='--', linewidth=0.5) 
     
     # Draw arrows to represent the policy at each cell
-    for i in range(10):
-        for j in range(10):
+    for i in range(J_new.shape[0]):
+        for j in range(J_new.shape[1]):
             if (i, j) not in obstacles_list and (i, j) not in goal_idx_list:
                 dx, dy = 0, 0
                 if u[i, j] == 0:  # Left
@@ -234,8 +243,13 @@ def visualize(J_new, u, obstacles_list, goal_idx_list, iteration_number):
                 ax.arrow(j, i, dx, dy, head_width=0.1, head_length=0.1, fc='red', ec='red')  # Change arrow color here
     
     fig.colorbar(im, ax=ax)
-    plt.title(f"Actions taken at the {iteration_number} iteration(s)")
-    plt.show()26.6
+    plt.title(f"Actions taken at iteration {iteration_number}")
+    plt.show()
+
+# Example usage:
+# visualize(J_new, u, obstacles_list, goal_idx_list, iteration_number, special_cell=(2, 3))
+
+
 
 
 # Initial setup
@@ -251,18 +265,16 @@ T = generate_transition_matrix(env_shape, obstacles_list, goal_idx_list[0])
 Q = generate_Q_map(states, env_shape, reward)
 
 # Initialize policy evaluation and improvement
-num_policy_iter = 4
+num_policy_iter = 5
 J = np.zeros(env_shape)
 u = np.ones((num_policy_iter+1, env_shape[0], env_shape[1]), dtype=int)
 
 # Iterate over policy evaluation and improvement
 for k in range(num_policy_iter):
     J_new = policy_evaluation(T, Q, J, u[k])
-    visualize(J_new, u[k+1],obstacles_list, goal_idx_list,k)
     J = J_new
     u[k+1] = policy_improvement(T, Q, J_new, gamma, env_shape)
-    
-
+    visualize(J_new, u[k+1],obstacles_list, goal_idx_list,k)
 
 
 
