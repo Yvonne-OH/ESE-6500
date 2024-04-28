@@ -182,6 +182,10 @@ class PPO():
             if (epoch + 1) % self.save_freq == 0:
                 torch.save(self.ac_model.state_dict(), os.path.join(self.training_path, self.model_filename))
                 print(f"Model saved at epoch {epoch + 1}.")
+            
+            # 保存训练日志到CSV
+            rewards_df = pd.DataFrame(mean_rewards, columns=['Total Reward'])
+            rewards_df.to_csv(os.path.join(self.training_path, 'training_log.csv'), index_label='Epoch')
         
         
 
@@ -264,8 +268,8 @@ wrapped_env = EnvironmentWrapper(env)
 # Initialize the PPO with the wrapped environment
 hyperparameters = {
 
-    'steps_per_epoch': 2000,
-    'epochs': 1000,
+    'steps_per_epoch': 1000,
+    'epochs': 8000,
     'train_pi_iters': 50,
     'train_vf_iters': 50,
     'save_freq': 100,
