@@ -56,7 +56,7 @@ class MLPGaussianActor(nn.Module):
 
 class MLPActorCritic(nn.Module):
     def __init__(self, obs_dim, act_dim, 
-                 hidden_sizes=(64,64), activation=nn.Tanh):
+                 hidden_sizes=(128,128), activation=nn.Tanh):
         super().__init__()
 
         # build policy 

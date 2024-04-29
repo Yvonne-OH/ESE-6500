@@ -68,11 +68,11 @@ class PPO():
 
         self.train_pi_iters=50
         self.train_vf_iters=50
-        self.pi_lr=6e-5
-        self.vf_lr=2e-4
+        self.pi_lr=3e-5
+        self.vf_lr=1e-4
 
         self.hidden=(128,128)
-        self.activation=[nn.Tanh, nn.PReLU]
+        self.activation=[nn.Tanh,nn.ReLU]
 
         self.flag_render=False
 
@@ -128,7 +128,7 @@ class PPO():
             loss_pi, pi_info = self.compute_loss_pi(data)
             kl = pi_info['kl']
             #if kl > 2.5 * self.target_kl:
-            if kl > 1.5 * self.target_kl:
+            if kl > 2.5 * self.target_kl:
                 print(f"Early stoping at step {i} due to max kl")
                 break
             loss_pi.backward() # compute grads
@@ -141,44 +141,51 @@ class PPO():
             loss_vf.backward() # compute grads 
             self.vf_optimizer.step() # update parameters
 
+
     def rollout(self):
         # reset environment parameters
         o, ep_ret, ep_len = self.env.reset(), 0, 0
-        total_epoch_reward = 0  # Initialize the total reward for the epoch
+        total_epoch_reward = 0
     
         # generate training data
         for t in range(self.steps_per_epoch):
-            # get action, value function, and logprob
-            a, v, logp = self.ac_model.step(torch.as_tensor(o, dtype=torch.float32))
+            # Ensure observation has a batch dimension
+            obs_tensor = torch.as_tensor(o, dtype=torch.float32).unsqueeze(0)
+            a, v, logp = self.ac_model.step(obs_tensor)
+            # Actions returned will also have a batch dimension; handle accordingly:
+            a = a[0]  # Get the first element to remove batch dimension if necessary
+    
             next_o, r, d, _ = self.env.step(a)
             ep_ret += r
             ep_len += 1
-    
-            # accumulate reward for epoch
             total_epoch_reward += r
-    
-            # save and log
             self.buf.store(o, a, r, v, logp)
-            
-            # Update obs (critical!)
-            o = copy(next_o)  # should be copy
     
+            # Update observation
+            o = next_o
+    
+            # Handle terminal state
             timeout = ep_len == self.max_ep_len
             terminal = d or timeout
             epoch_ended = t == self.steps_per_epoch - 1
     
             if terminal or epoch_ended:
-                if epoch_ended and not(terminal):
-                    print('Warning: trajectory cut off by epoch at %d steps.' % ep_len, flush=True)
+                if epoch_ended and not terminal:
+                    print('Warning: trajectory cut off by epoch at %d steps.' % ep_len)
                 if timeout or epoch_ended:
-                    _, v, _ = self.ac_model.step(torch.as_tensor(o, dtype=torch.float32))
+                    _, v, _ = self.ac_model.step(torch.as_tensor(o, dtype=torch.float32).unsqueeze(0))
                 else:
                     v = 0
                 self.buf.finish_path(v)
                 o, ep_ret, ep_len = self.env.reset(), 0, 0
     
         return total_epoch_reward
+
               
+    def adjust_learning_rate(self, optimizer, new_lr):
+        """Update the learning rate of the optimizer."""
+        for param_group in optimizer.param_groups:
+            param_group['lr'] = new_lr
 
     def learn(self):
         
@@ -215,14 +222,22 @@ class PPO():
                 plt.grid(True)
                 plt.show()
             
-            if (epoch + 1) % 1000 == 0:
-                self.pi_lr /= 2
-                self.vf_lr /= 2
+         
+            
+            if (epoch + 1) % 4000 == 0:
+                self.pi_lr /= 10
+                self.vf_lr /= 10
                 self.adjust_learning_rate(self.pi_optimizer, self.pi_lr)
                 self.adjust_learning_rate(self.vf_optimizer, self.vf_lr)
                 print(f"Learning rates adjusted at epoch {epoch + 1}: pi_lr={self.pi_lr}, vf_lr={self.vf_lr}")
-    
         
+            if (epoch + 1) % 6000 == 0:
+                self.pi_lr /= 10
+                self.vf_lr /= 10
+                self.adjust_learning_rate(self.pi_optimizer, self.pi_lr)
+                self.adjust_learning_rate(self.vf_optimizer, self.vf_lr)
+                print(f"Learning rates adjusted at epoch {epoch + 1}: pi_lr={self.pi_lr}, vf_lr={self.vf_lr}")
+                
             if (epoch + 1) % self.save_freq == 0:
                 torch.save(self.ac_model.state_dict(), os.path.join(self.training_path, self.model_filename))
                 print(f"Model saved at epoch {epoch + 1}.")
@@ -290,7 +305,7 @@ if __name__=='__main__':
     
     #%%
     # Load a trained model, assuming it's already trained
-    ppo_agent.ac_model.load_state_dict(torch.load('./training/walker/walk/best_ppo_ac_model - Copy (2).pth'))
+    ppo_agent.ac_model.load_state_dict(torch.load('./training/walker/walk/best_ppo_ac_model.pth'))
     ppo_agent.ac_model.eval()
     
     # Define the policy function for DM Control Viewer

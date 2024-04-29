@@ -26,7 +26,7 @@ from ppo import PPO
 
 
 # Load data
-data = pd.read_csv('./training/walker/walk/training_log.csv')
+data = pd.read_csv('./training/walker/walk/training_log (1).csv')
 
 loss = data['Total Reward']
 
@@ -107,7 +107,7 @@ hyperparameters = {
 ppo_agent = PPO(wrapped_env, **hyperparameters)
 
 # Load a trained model, assuming it's already trained
-ppo_agent.ac_model.load_state_dict(torch.load('./training/walker/walk/best_ppo_ac_model - Copy (2).pth'))
+ppo_agent.ac_model.load_state_dict(torch.load('./training/walker/walk/ppo_ac_model.pth'))
 ppo_agent.ac_model.eval()
 
 # Define the policy function for DM Control Viewer
